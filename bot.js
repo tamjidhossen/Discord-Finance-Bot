@@ -96,11 +96,10 @@ function detectMessageType(message) {
     // Check for voice/audio files
     const hasVoice = message.attachments.some(
       (att) =>
-        att.contentType &&
-        (att.contentType.startsWith("audio/") ||
-          [".ogg", ".webm", ".mp3", ".wav"].some((ext) =>
-            att.name.toLowerCase().endsWith(ext)
-          ))
+        (att.contentType && att.contentType.startsWith("audio/")) ||
+        (att.name && [".ogg", ".webm", ".mp3", ".wav"].some((ext) =>
+          att.name.toLowerCase().endsWith(ext)
+        ))
     );
     if (hasVoice) {
       return "voice";
@@ -149,24 +148,26 @@ function createEnhancedPayload(message, messageType) {
   if (messageType === "voice") {
     const voiceAttachments = message.attachments.filter(
       (att) =>
-        att.contentType &&
-        (att.contentType.startsWith("audio/") ||
-          [".ogg", ".webm", ".mp3", ".wav"].some((ext) =>
-            att.name.toLowerCase().endsWith(ext)
-          ))
+        att.contentType?.startsWith("audio/") ||
+        [".ogg", ".webm", ".mp3", ".wav"].some((ext) =>
+          att.name.toLowerCase().endsWith(ext)
+        )
     );
 
     if (voiceAttachments.length === 0) {
-      console.log("⚠️ No voice attachments found despite being detected as voice message");
-      return basePayload; // Return basic payload if no voice attachments
+      return basePayload;
     }
 
-    const voiceAttachment = voiceAttachments[0]; // Get first voice attachment
+    const voiceAttachment = voiceAttachments[0];
+    // pick whichever URL field is defined
+    const url = voiceAttachment.url
+      ?? voiceAttachment.proxyURL
+      ?? voiceAttachment.attachment?.url;
 
     return {
       ...basePayload,
       voice: {
-        url: voiceAttachment.url,
+        url,
         proxyUrl: voiceAttachment.proxyURL,
         filename: voiceAttachment.name,
         size: voiceAttachment.size,
