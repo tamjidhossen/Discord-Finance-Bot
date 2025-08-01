@@ -96,10 +96,8 @@ function detectMessageType(message) {
     // Check for voice/audio files
     const hasVoice = message.attachments.some(
       (att) =>
-        (att.contentType && att.contentType.startsWith("audio/")) ||
-        (att.name && [".ogg", ".webm", ".mp3", ".wav"].some((ext) =>
-          att.name.toLowerCase().endsWith(ext)
-        ))
+        att.contentType?.startsWith("audio/") ||
+        /\.(ogg|mp3|wav|webm)$/i.test(att.name)
     );
     if (hasVoice) {
       return "voice";
@@ -146,69 +144,28 @@ function createEnhancedPayload(message, messageType) {
   }
 
   if (messageType === "voice") {
-    // Debug: Log all attachments with full structure
-    console.log(
-      "All attachments:",
-      [...message.attachments.values()].map((a) => a.toJSON())
+    // grab only the audio attachments
+    const voiceAttachments = message.attachments.filter((att) =>
+      att.contentType?.startsWith("audio/") ||
+      /\.(ogg|mp3|wav|webm)$/i.test(att.name)
     );
 
-    const voiceAttachments = message.attachments.filter(
-      (att) =>
-        att.contentType?.startsWith("audio/") ||
-        [".ogg", ".webm", ".mp3", ".wav"].some((ext) =>
-          att.name?.toLowerCase().endsWith(ext)
-        )
-    );
+    // nothing to do?
+    if (!voiceAttachments.length) return basePayload;
 
-    console.log("🔍 Filtered voice attachments count:", voiceAttachments.length);
-    console.log("🔍 Voice attachments array:", voiceAttachments.map(a => a.toJSON()));
-
-    if (voiceAttachments.length === 0) {
-      // Fallback: use first attachment for voice messages
-      const firstAttachment = message.attachments.first();
-      if (firstAttachment) {
-        console.log("🔄 Using first attachment as voice fallback:", {
-          name: firstAttachment.name,
-          contentType: firstAttachment.contentType,
-          url: firstAttachment.url
-        });
-        
-        const url = firstAttachment.url
-          ?? firstAttachment.attachment?.url
-          ?? firstAttachment.proxyURL;
-
-        return {
-          ...basePayload,
-          voice: {
-            url,
-            proxyUrl: firstAttachment.proxyURL,
-            filename: firstAttachment.name,
-            size: firstAttachment.size,
-            contentType: firstAttachment.contentType || "audio/unknown",
-          },
-        };
-      }
-      return basePayload;
-    }
-
-    const voiceAttachment = voiceAttachments[0];
-    
-    // Debug: Check the structure of voice attachment
-    console.log("🔍 Voice attachment structure:", voiceAttachment);
-    
-    // pick whichever URL field is defined
-    const url = voiceAttachment.url
-      ?? voiceAttachment.attachment?.url
-      ?? voiceAttachment.proxyURL;
+    const voice = voiceAttachments[0]; 
 
     return {
       ...basePayload,
       voice: {
-        url,
-        proxyUrl: voiceAttachment.proxyURL,
-        filename: voiceAttachment.name,
-        size: voiceAttachment.size,
-        contentType: voiceAttachment.contentType,
+        // these two always exist in your dump
+        url: voice.url,
+        proxyUrl: voice.proxyURL,
+        filename: voice.name,
+        size: voice.size,
+        contentType: voice.contentType,
+        duration: voice.duration,      // 2.26 from your dump
+        waveform: voice.waveform,      // base64 from your dump
       },
     };
   }
