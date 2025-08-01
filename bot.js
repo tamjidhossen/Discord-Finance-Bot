@@ -146,15 +146,48 @@ function createEnhancedPayload(message, messageType) {
   }
 
   if (messageType === "voice") {
+    // Debug: Log all attachments with full structure
+    console.log(
+      "All attachments:",
+      [...message.attachments.values()].map((a) => a.toJSON())
+    );
+
     const voiceAttachments = message.attachments.filter(
       (att) =>
         att.contentType?.startsWith("audio/") ||
         [".ogg", ".webm", ".mp3", ".wav"].some((ext) =>
-          att.name.toLowerCase().endsWith(ext)
+          att.name?.toLowerCase().endsWith(ext)
         )
     );
 
+    console.log("🔍 Filtered voice attachments count:", voiceAttachments.length);
+    console.log("🔍 Voice attachments array:", voiceAttachments.map(a => a.toJSON()));
+
     if (voiceAttachments.length === 0) {
+      // Fallback: use first attachment for voice messages
+      const firstAttachment = message.attachments.first();
+      if (firstAttachment) {
+        console.log("🔄 Using first attachment as voice fallback:", {
+          name: firstAttachment.name,
+          contentType: firstAttachment.contentType,
+          url: firstAttachment.url
+        });
+        
+        const url = firstAttachment.url
+          ?? firstAttachment.attachment?.url
+          ?? firstAttachment.proxyURL;
+
+        return {
+          ...basePayload,
+          voice: {
+            url,
+            proxyUrl: firstAttachment.proxyURL,
+            filename: firstAttachment.name,
+            size: firstAttachment.size,
+            contentType: firstAttachment.contentType || "audio/unknown",
+          },
+        };
+      }
       return basePayload;
     }
 
