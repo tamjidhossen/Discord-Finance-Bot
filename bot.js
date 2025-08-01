@@ -28,6 +28,17 @@ client.on("messageCreate", async (message) => {
   // Only forward messages from the target channel
   if (message.channel.id !== TARGET_CHANNEL_ID) return;
 
+  // Start typing indicator
+  await message.channel.sendTyping();
+
+  // Keep typing indicator alive during processing
+  const typingInterval = setInterval(() => {
+    message.channel.sendTyping().catch(() => {
+      // Ignore errors if channel becomes unavailable
+      clearInterval(typingInterval);
+    });
+  }, 5000); // Discord typing indicator lasts ~10 seconds, refresh every 5
+
   const payload = {
     content: message.content,
     author: message.author.username,
@@ -58,6 +69,9 @@ client.on("messageCreate", async (message) => {
     console.log("✅ Sent to n8n:", message.content);
   } catch (err) {
     console.error("❌ Error sending to n8n:", err.message);
+  } finally {
+    // Stop typing indicator
+    clearInterval(typingInterval);
   }
 });
 
