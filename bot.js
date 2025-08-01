@@ -85,22 +85,24 @@ client.on("messageCreate", async (message) => {
 // Message type detection function
 function detectMessageType(message) {
   if (message.attachments.size > 0) {
-    const attachment = message.attachments.first();
-
-    // Check if it's an image
-    if (attachment.contentType && attachment.contentType.startsWith("image/")) {
+    // Check for images first
+    const hasImages = message.attachments.some(
+      (att) => att.contentType && att.contentType.startsWith("image/")
+    );
+    if (hasImages) {
       return "image";
     }
 
-    // Check if it's a voice/audio file
-    if (
-      attachment.contentType &&
-      (attachment.contentType.startsWith("audio/") ||
-        attachment.name.endsWith(".ogg") ||
-        attachment.name.endsWith(".webm") ||
-        attachment.name.endsWith(".mp3") ||
-        attachment.name.endsWith(".wav"))
-    ) {
+    // Check for voice/audio files
+    const hasVoice = message.attachments.some(
+      (att) =>
+        att.contentType &&
+        (att.contentType.startsWith("audio/") ||
+          [".ogg", ".webm", ".mp3", ".wav"].some((ext) =>
+            att.name.toLowerCase().endsWith(ext)
+          ))
+    );
+    if (hasVoice) {
       return "voice";
     }
   }
@@ -153,6 +155,11 @@ function createEnhancedPayload(message, messageType) {
             att.name.toLowerCase().endsWith(ext)
           ))
     );
+
+    if (voiceAttachments.length === 0) {
+      console.log("⚠️ No voice attachments found despite being detected as voice message");
+      return basePayload; // Return basic payload if no voice attachments
+    }
 
     const voiceAttachment = voiceAttachments[0]; // Get first voice attachment
 
