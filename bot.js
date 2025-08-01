@@ -159,10 +159,14 @@ function createEnhancedPayload(message, messageType) {
     }
 
     const voiceAttachment = voiceAttachments[0];
+    
+    // Debug: Check the structure of voice attachment
+    console.log("🔍 Voice attachment structure:", voiceAttachment);
+    
     // pick whichever URL field is defined
     const url = voiceAttachment.url
-      ?? voiceAttachment.proxyURL
-      ?? voiceAttachment.attachment?.url;
+      ?? voiceAttachment.attachment?.url
+      ?? voiceAttachment.proxyURL;
 
     return {
       ...basePayload,
