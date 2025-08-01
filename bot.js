@@ -150,10 +150,13 @@ function createEnhancedPayload(message, messageType) {
       /\.(ogg|mp3|wav|webm)$/i.test(att.name)
     );
 
-    // nothing to do?
-    if (!voiceAttachments.length) return basePayload;
+    console.log("🔍 Voice attachments found:", voiceAttachments.size);
+    console.log("🔍 First voice attachment:", voiceAttachments.first()?.toJSON());
 
-    const voice = voiceAttachments[0]; 
+    // nothing to do?
+    if (!voiceAttachments.size) return basePayload;
+
+    const voice = voiceAttachments.first(); 
 
     return {
       ...basePayload,
