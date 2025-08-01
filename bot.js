@@ -28,16 +28,8 @@ client.on("messageCreate", async (message) => {
   // Only forward messages from the target channel
   if (message.channel.id !== TARGET_CHANNEL_ID) return;
 
-  // Start typing indicator
-  await message.channel.sendTyping();
-
-  // Keep typing indicator alive during processing
-  const typingInterval = setInterval(() => {
-    message.channel.sendTyping().catch(() => {
-      // Ignore errors if channel becomes unavailable
-      clearInterval(typingInterval);
-    });
-  }, 5000);
+  // Minimal typing indicator (reduce CPU usage)
+  message.channel.sendTyping();
 
   try {
     // Detect message type and create enhanced payload
@@ -66,19 +58,9 @@ client.on("messageCreate", async (message) => {
       body: JSON.stringify(payload),
     });
 
-    console.log(`✅ Sent ${messageType} message to n8n:`, {
-      content: message.content || "[No text content]",
-      attachments: message.attachments.size,
-      messageType: messageType,
-    });
+    console.log(`✅ ${messageType}:`, message.content?.slice(0, 50) || `[${messageType}]`);
   } catch (err) {
-    console.error(
-      `❌ Error sending ${detectMessageType(message)} message to n8n:`,
-      err.message
-    );
-  } finally {
-    // Stop typing indicator
-    clearInterval(typingInterval);
+    console.error(`❌ ${detectMessageType(message)}:`, err.message);
   }
 });
 
@@ -150,9 +132,6 @@ function createEnhancedPayload(message, messageType) {
       /\.(ogg|mp3|wav|webm)$/i.test(att.name)
     );
 
-    console.log("🔍 Voice attachments found:", voiceAttachments.size);
-    console.log("🔍 First voice attachment:", voiceAttachments.first()?.toJSON());
-
     // nothing to do?
     if (!voiceAttachments.size) return basePayload;
 
@@ -161,14 +140,13 @@ function createEnhancedPayload(message, messageType) {
     return {
       ...basePayload,
       voice: {
-        // these two always exist in your dump
         url: voice.url,
         proxyUrl: voice.proxyURL,
         filename: voice.name,
         size: voice.size,
         contentType: voice.contentType,
-        duration: voice.duration,      // 2.26 from your dump
-        waveform: voice.waveform,      // base64 from your dump
+        duration: voice.duration,
+        waveform: voice.waveform,
       },
     };
   }
