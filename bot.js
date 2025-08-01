@@ -1,11 +1,13 @@
 const { Client, GatewayIntentBits } = require("discord.js");
 const fetch = require("node-fetch");
 const express = require("express");
+const jwt = require("jsonwebtoken");
 
 // Load env vars
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const WEBHOOK_URL = process.env.N8N_WEBHOOK;
 const TARGET_CHANNEL_ID = process.env.TARGET_CHANNEL_ID;
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // Initialize Discord bot
 const client = new Client({
@@ -33,10 +35,24 @@ client.on("messageCreate", async (message) => {
     time: message.createdAt,
   };
 
+  // Generate JWT token
+  const token = jwt.sign(
+    {
+      bot: "discord-forwarder",
+      timestamp: Date.now(),
+      payload: payload,
+    },
+    JWT_SECRET,
+    { expiresIn: "5m" } // Token expires in 5 minutes
+  );
+
   try {
     await fetch(WEBHOOK_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify(payload),
     });
     console.log("✅ Sent to n8n:", message.content);
