@@ -1,0 +1,547 @@
+{
+  "name": "Discord Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.0-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.0-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Today's date is {{ DateTime.now().setZone('Asia/Dhaka').toFormat(\"yyyy-MM-dd hh:mm a\") }}.\nGiven the following transaction description: \"{{ $json.body.content }}\"  \n\nAnd the following categories:\n{\n  \"Housing\": {\n    \"description\": \"Housing and home-related expenses\",\n    \"subcategories\": [\"Rent\"]\n  },\n  \"Food\": {\n    \"description\": \"Food and beverage expenses\",\n    \"subcategories\": [\"Groceries\", \"Dining Out\", \"Regular Meal\", \"Snacks\"]\n  },\n  \"Transportation\": {\n    \"description\": \"Transportation and travel costs\",\n    \"subcategories\": []\n  },\n  \"Healthcare\": {\n    \"description\": \"Medical and health expenses\",\n    \"subcategories\": [\"Doctor Visits\", \"Pharmacy\"]\n  },\n  \"Entertainment\": {\n    \"description\": \"Entertainment and leisure activities\",\n    \"subcategories\": [\"Movies\", \"Games\", \"Concerts\", \"Books\"]\n  },\n  \"Shopping\": {\n    \"description\": \"Shopping and personal items\",\n    \"subcategories\": [\"Clothing\", \"Electronics\", \"Personal Care\", \"Home Goods\", \"Gifts\"]\n  },\n  \"Bills\": {\n    \"description\": \"Regular bills and subscriptions\",\n    \"subcategories\": [\"Phone\", \"Internet\", \"Subscriptions\", \"Memberships\"]\n  },\n  \"Education\": {\n    \"description\": \"Education and learning expenses\",\n    \"subcategories\": [\"Tuition\", \"Books\", \"Courses\", \"Stationeries\", \"Certifications\", \"Workshops\", \"Programming-Contest\", \"Exam Registration\"]\n  },\n  \"Other\": {\n    \"description\": \"Miscellaneous expenses\",\n    \"subcategories\": [\"Donations\", \"Miscellaneous\"]\n  }\n}\n\nAnalyze the input and identify all individual transactions.  \nReturn a JSON array of objects, each with:\n  {\n    \"date\": \"YYYY-MM-DD hh:mm a (use today's date if none mentioned)\",\n    \"category\": \"one of the provided main categories\",\n    \"subcategory\": \"one of its subcategories\",\n    \"amount\": float,\n    \"description\": \"short description (empty if none)\"\n  }\n\nAssume “Regular Meal” for any food unless “Dining Out” or a restaurant is mentioned.  \nIf uncategorizable, set both category and subcategory to \"Other\".  \nIf only one transaction, return an array with one object.  \nDo not invent new categories or subcategories.\n"
+            },
+            {
+              "content": "You are a JSON formatter.  \nOnly output valid JSON—no explanations, no markdown.  \nAlways produce a top-level array of objects matching exactly the schema requested.\n",
+              "role": "model"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [-208, -112],
+      "id": "11047ed4-dc5c-45c3-8d7c-ec59dbc99d9a",
+      "name": "Message a model",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GOOGLE_PALM_API_ID",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "message",
+        "guildId": {
+          "__rl": true,
+          "value": "YOUR_DISCORD_SERVER_ID",
+          "mode": "list",
+          "cachedResultName": "Your Server Name",
+          "cachedResultUrl": "https://discord.com/channels/YOUR_DISCORD_SERVER_ID"
+        },
+        "channelId": {
+          "__rl": true,
+          "value": "YOUR_DISCORD_CHANNEL_ID",
+          "mode": "list",
+          "cachedResultName": "your-channel-name",
+          "cachedResultUrl": "https://discord.com/channels/YOUR_DISCORD_SERVER_ID/YOUR_DISCORD_CHANNEL_ID"
+        },
+        "content": "={{\n'🗓️ ' + DateTime.now().setZone('Asia/Dhaka').toFormat(\"yyyy-MM-dd hh:mm a\") + '\\n\\n' +\n\n$items()\n  .filter(item => !item.json[\"Expense Category\"])\n  .map(item => {\n    const t = item.json;\n    const cat = t.Category || '';\n    const sub = t.Subcategory || '';\n    const amount = t.Amount?.toFixed(2) || '0.00';\n    const desc = t[\"Desc.\"] || '';\n    \n    return `• ${cat}${sub ? ' > ' + sub : ''}  \n  Amount: ৳${amount}  \n  ${desc ? 'Note: ' + desc : ''}`;\n  })\n  .join('\\n\\n') +\n\n'\\n\\n' +\n\n$items()\n  .filter(item => item.json[\"Expense Category\"])\n  .map(item => {\n    const t = item.json;\n    const label = t[\"Expense Category\"];\n    const value = t.Total?.toFixed(2) || '0.00';\n    return `**${label}**: ৳${value}`;\n  })\n  .join('\\n')\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [1280, 112],
+      "id": "d1e40bf8-2cba-4457-ba74-9c38603306a8",
+      "name": "Send a message",
+      "webhookId": "YOUR_DISCORD_WEBHOOK_ID",
+      "executeOnce": true,
+      "credentials": {
+        "discordOAuth2Api": {
+          "id": "YOUR_DISCORD_OAUTH_ID",
+          "name": "Discord account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "YOUR_WEBHOOK_PATH",
+        "authentication": "jwtAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-912, 96],
+      "id": "bd71ddae-9e29-4561-a021-f39f8f826666",
+      "name": "Webhook",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "jwtAuth": {
+          "id": "YOUR_JWT_AUTH_ID",
+          "name": "JWT Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.messageType }}",
+                    "rightValue": "text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "be8466e4-79b2-49d4-b557-e57f662b0219"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "34c4a14c-9a30-4c30-a371-42d945b29b0d",
+                    "leftValue": "={{ $json.body.messageType }}",
+                    "rightValue": "image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Image"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "2de34a99-567f-412f-9ee0-b59a5fcc3684",
+                    "leftValue": "={{ $json.body.messageType }}",
+                    "rightValue": "voice",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Voice"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [-608, 80],
+      "id": "993ff45b-b118-4a57-b12d-1b6e36abf969",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "text": "=You are a JSON formatter.  \nOnly output valid JSON—no explanations, no markdown, no code blocks.  \n\nToday's date is {{ DateTime.now().setZone('Asia/Dhaka').toFormat(\"yyyy-MM-dd hh:mm a\") }}.\n\nA audio file is attached.\n\nTranscribe any spoken content in the audio. Then, analyze the text to extract all financial transactions or purchases mentioned.\n\nHere are the available categories:\n{\n  \"Housing\": {\n    \"description\": \"Housing and home-related expenses\",\n    \"subcategories\": [\"Rent\"]\n  },\n  \"Food\": {\n    \"description\": \"Food and beverage expenses\",\n    \"subcategories\": [\"Groceries\", \"Dining Out\", \"Regular Meal\", \"Snacks\"]\n  },\n  \"Transportation\": {\n    \"description\": \"Transportation and travel costs\",\n    \"subcategories\": []\n  },\n  \"Healthcare\": {\n    \"description\": \"Medical and health expenses\",\n    \"subcategories\": [\"Doctor Visits\", \"Pharmacy\"]\n  },\n  \"Entertainment\": {\n    \"description\": \"Entertainment and leisure activities\",\n    \"subcategories\": [\"Movies\", \"Games\", \"Concerts\", \"Books\"]\n  },\n  \"Shopping\": {\n    \"description\": \"Shopping and personal items\",\n    \"subcategories\": [\"Clothing\", \"Electronics\", \"Personal Care\", \"Home Goods\", \"Gifts\"]\n  },\n  \"Bills\": {\n    \"description\": \"Regular bills and subscriptions\",\n    \"subcategories\": [\"Phone\", \"Internet\", \"Subscriptions\", \"Memberships\"]\n  },\n  \"Education\": {\n    \"description\": \"Education and learning expenses\",\n    \"subcategories\": [\"Tuition\", \"Books\", \"Courses\", \"Stationeries\", \"Certifications\", \"Workshops\", \"Programming-Contest\", \"Exam Registration\"]\n  },\n  \"Other\": {\n    \"description\": \"Miscellaneous expenses\",\n    \"subcategories\": [\"Donations\", \"Miscellaneous\"]\n  }\n}\n\nExtract all transactions as a JSON array of objects in this format:\n{\n  \"date\": \"YYYY-MM-DD hh:mm a (use today's date if not mentioned)\",\n  \"category\": \"one of the provided main categories\",\n  \"subcategory\": \"one of its subcategories\",\n  \"amount\": float,\n  \"description\": \"short description (empty if none)\"\n}\n\n- Assume “Regular Meal” for food unless “Dining Out” or a restaurant is clearly mentioned.\n- If uncategorizable, set both category and subcategory to \"Other\".\n- If only one transaction, return an array with one object.\n- Do **not** invent new categories or subcategories.\n- Only output valid JSON—no explanations, no markdown.  \n- Always produce a top-level array of objects matching exactly the schema requested.",
+        "audioUrls": "={{ $json.body.voice.proxyUrl }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [-128, 352],
+      "id": "dd528897-89bd-41fd-a55d-6099bff0a9a7",
+      "name": "Analyze audio",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GOOGLE_PALM_API_ID",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.0-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.0-flash"
+        },
+        "text": "=You are a JSON formatter. Only output valid JSON—no explanations, no markdown, no code blocks. Do not include ```json or any markdown formatting.  \n\nToday's date is {{ DateTime.now().setZone('Asia/Dhaka').toFormat(\"yyyy-MM-dd hh:mm a\") }}.\n\nYou are given a user message:  \n\"{{ $json.body.content }}\"  \n\nAnd image of the following receipt/bill/invoice or anything related to financial transaction is attached.\n\nAnalyze the images and extract all financial transactions or purchases mentioned.  \nUse the message text as context if needed (e.g., to disambiguate items).\n\nHere are the available categories:\n{\n  \"Housing\": {\n    \"description\": \"Housing and home-related expenses\",\n    \"subcategories\": [\"Rent\"]\n  },\n  \"Food\": {\n    \"description\": \"Food and beverage expenses\",\n    \"subcategories\": [\"Groceries\", \"Dining Out\", \"Regular Meal\", \"Snacks\"]\n  },\n  \"Transportation\": {\n    \"description\": \"Transportation and travel costs\",\n    \"subcategories\": []\n  },\n  \"Healthcare\": {\n    \"description\": \"Medical and health expenses\",\n    \"subcategories\": [\"Doctor Visits\", \"Pharmacy\"]\n  },\n  \"Entertainment\": {\n    \"description\": \"Entertainment and leisure activities\",\n    \"subcategories\": [\"Movies\", \"Games\", \"Concerts\", \"Books\"]\n  },\n  \"Shopping\": {\n    \"description\": \"Shopping and personal items\",\n    \"subcategories\": [\"Clothing\", \"Electronics\", \"Personal Care\", \"Home Goods\", \"Gifts\"]\n  },\n  \"Bills\": {\n    \"description\": \"Regular bills and subscriptions\",\n    \"subcategories\": [\"Phone\", \"Internet\", \"Subscriptions\", \"Memberships\"]\n  },\n  \"Education\": {\n    \"description\": \"Education and learning expenses\",\n    \"subcategories\": [\"Tuition\", \"Books\", \"Courses\", \"Stationeries\", \"Certifications\", \"Workshops\", \"Programming-Contest\", \"Exam Registration\"]\n  },\n  \"Other\": {\n    \"description\": \"Miscellaneous expenses\",\n    \"subcategories\": [\"Donations\", \"Miscellaneous\"]\n  }\n}\n\nExtract all transactions as a JSON array of objects in this format:\n{\n  \"date\": \"YYYY-MM-DD hh:mm a (use today's date if not found)\",\n  \"category\": \"one of the provided main categories\",\n  \"subcategory\": \"one of its subcategories\",\n  \"amount\": float,\n  \"description\": \"short description (empty if none)\"\n}\n\n- Assume “Regular Meal” for food unless “Dining Out” or a restaurant is clearly mentioned.\n- If uncategorizable, set both category and subcategory to \"Other\".\n- If only one transaction, return an array with one object.\n- Do **not** invent new categories or subcategories.\n- Always produce a top-level array of objects matching exactly the schema requested.",
+        "imageUrls": "={{$json.body.images.map(image => image.proxyUrl).join(',')}}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [-128, 96],
+      "id": "1b858767-2d83-49d2-8639-65c9f7baa1a9",
+      "name": "Analyze image",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GOOGLE_PALM_API_ID",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Expense Tracker - 2025",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1593315705,
+          "mode": "list",
+          "cachedResultName": "August",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=1593315705"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date ": "={{ $json.date }}",
+            "Category": "={{ $json.category }}",
+            "Subcategory": "={{ $json.subcategory }}",
+            "Amount": "={{ $json.amount }}",
+            "Desc.": "={{ $json.description }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date ",
+              "displayName": "Date ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Subcategory",
+              "displayName": "Subcategory",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Amount",
+              "displayName": "Amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Desc.",
+              "displayName": "Desc.",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Expense Category",
+              "displayName": "Expense Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Total",
+              "displayName": "Total",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [608, 96],
+      "id": "af031a32-54fb-455b-be31-a7485292aa2a",
+      "name": "Append row in sheet",
+      "executeOnce": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_OAUTH_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "let rawText = items[0].json.content?.parts?.[0]?.text || '';\n\n// Trim leading/trailing whitespace\nrawText = rawText.trim();\n\n// Remove any surrounding ```json or ``` or standalone backticks\nif (rawText.startsWith('```')) {\n  rawText = rawText.replace(/^```json|^```|```$/g, '').trim();\n}\nrawText = rawText.replace(/```/g, '').trim();\n\n// Parse JSON (will crash here if invalid)\nconst parsedTransactions = JSON.parse(rawText);\n\n// Return each transaction as a separate item\nreturn parsedTransactions.map(txn => ({ json: txn }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 96],
+      "id": "99944951-c92d-4151-b4ce-73dad672824b",
+      "name": "JSON Formatter"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Expense Tracker - 2025",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1593315705,
+          "mode": "list",
+          "cachedResultName": "August",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=1593315705"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Expense Category",
+              "lookupValue": "Food Cost Per Day"
+            },
+            {
+              "lookupColumn": "Expense Category",
+              "lookupValue": "Total Expense"
+            }
+          ]
+        },
+        "combineFilters": "OR",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [864, 224],
+      "id": "9f89d040-4991-4392-9145-6df50bcd8c69",
+      "name": "Get row(s) in sheet",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_OAUTH_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [1088, 112],
+      "id": "b9d62dca-fc22-45a3-ad52-208603741af7",
+      "name": "Merge",
+      "executeOnce": false
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "JSON Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Analyze image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Analyze audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze image": {
+      "main": [
+        [
+          {
+            "node": "JSON Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze audio": {
+      "main": [
+        [
+          {
+            "node": "JSON Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "JSON Formatter": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [[]]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "all",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "YOUR_VERSION_ID",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "YOUR_WORKFLOW_ID",
+  "tags": []
+}
