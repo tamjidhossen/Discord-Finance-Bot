@@ -18,12 +18,12 @@ The process is fully automated, from message detection to data entry.
 
 ```mermaid
 graph TD
-    A[Discord Message <br>(Text, Image, or Voice)] --> B{Discord Bot <br>on Render};
-    B --> |JWT Secured Webhook| C{n8n Workflow <br>on Render};
-    C --> |Analyze Content| D[Google Gemini AI];
-    D --> |Structured JSON| C;
-    C --> |Append to Sheet| E[Google Sheets];
-    C --> |Send Confirmation| F[Discord Channel];
+    A["Discord Message<br/>(Text, Image, or Voice)"] --> B["Discord Bot<br/>on Render"]
+    B --> |JWT Secured Webhook| C["n8n Workflow<br/>on Render"]
+    C --> |Analyze Content| D[Google Gemini AI]
+    D --> |Structured JSON| C
+    C --> |Append to Sheet| E[Google Sheets]
+    C --> |Send Confirmation| F[Discord Channel]
 ```
 
 ## Setup Guide
@@ -88,7 +88,6 @@ Before setting up n8n, you need to enable the Google Sheets API and create OAuth
 
 ![Google Sheets Example](docs/screenshots/google_sheets.png)
 
-
 ### 4. Deployment & Hosting
 
 1.  **Fork & Deploy**: Fork this repository and deploy it on [Render](https://render.com) as a "Web Service".
@@ -98,7 +97,6 @@ Before setting up n8n, you need to enable the Google Sheets API and create OAuth
 2.  **Set Environment Variables**: In your Render service settings, add the environment variables you collected: `DISCORD_TOKEN`, `TARGET_CHANNEL_ID`, `N8N_WEBHOOK`, and `JWT_SECRET`. Render will set the `PORT` variable automatically.
 
 ![Render Dashboard](docs/screenshots/render_free_plan_running_n8n_and_messegeForwarderScript.png)
-
 
 3.  **Keep-Alive Service**: Render's free services spin down when inactive (after 15 mins.). To ensure the bot and n8n are always running, use a free cron job service like [cron-job.org](https://cron-job.org) or [FastCron](https://fastcron.com/) (or both for extra reliability) to send a `GET` request to your Render service URL and your n8n URL every 5-10 minutes.
 
@@ -110,7 +108,7 @@ With this setup, you have a fully automated, personal finance tracker running fo
 
 ## Developer
 
-Built with ☕ and curiosity by **Tamjid Hossen** 
+Built with ☕ and curiosity by **Tamjid Hossen**
 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/tamjidhossen/)
 [![GitHub](https://img.shields.io/badge/GitHub-Follow-black?style=for-the-badge&logo=github)](https://github.com/tamjidhossen)
